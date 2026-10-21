@@ -20,7 +20,8 @@ WORKDIR /app
 # cambiá a "uv sync --frozen" para builds 100% reproducibles.
 FROM base AS deps
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir \
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir \
     "fastapi[standard]>=0.111" "uvicorn[standard]>=0.30" "gunicorn>=22.0" \
     "sqlmodel>=0.0.21" "sqlalchemy[asyncio]>=2.0" "asyncpg>=0.29" "alembic>=1.13" \
     "pydantic-settings>=2.3" "python-jose[cryptography]>=3.3" "passlib[bcrypt]>=1.7" \
