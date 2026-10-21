@@ -1,0 +1,6 @@
+{
+  "name": "@sosa-frotman/portal",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": { "dev": "echo 'TODO: scaffold del portal de cliente'" }
+}

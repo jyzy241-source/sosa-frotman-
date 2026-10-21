@@ -1,0 +1,103 @@
+version: "3.9"
+
+# Uso en el VPS: docker compose -f docker-compose.prod.yml up -d --build
+# Nginx del HOST (el que ya tenés con Certbot) hace reverse proxy hacia
+# localhost:8000 (api) y localhost:4173 (web build estático) — no se
+# reemplaza tu Nginx/Certbot actual, solo se agrega un salto más.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sf_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    # Sin puerto publicado al host: solo la red interna de docker accede.
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: sf_redis
+    restart: always
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  api:
+    build:
+      context: ../services/api
+      dockerfile: ../../docker/services/api/Dockerfile
+      target: prod
+    container_name: sf_api
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "127.0.0.1:8000:8000"   # solo loopback; Nginx del host hace el proxy
+    networks: [internal]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             gunicorn app.main:app -k uvicorn.workers.UvicornWorker
+             --workers 4 --bind 0.0.0.0:8000 --timeout 60
+             --access-logfile - --error-logfile -"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: ../../docker/apps/web/Dockerfile
+      target: prod
+      args:
+        VITE_API_URL: https://api.sosafrotman.com/api/v1
+    container_name: sf_web
+    restart: always
+    ports:
+      - "127.0.0.1:4173:80"    # solo loopback; Nginx del host hace el proxy
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+networks:
+  internal:
+
+volumes:
+  pgdata:
