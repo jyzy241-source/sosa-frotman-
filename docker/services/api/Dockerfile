@@ -38,6 +38,7 @@ RUN pip install --no-cache-dir \
     "pytest>=8.2" "pytest-asyncio>=0.23" "ruff>=0.5" "mypy>=1.10"
 COPY . .
 ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONPATH="/app"
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
