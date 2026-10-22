@@ -1,7 +1,7 @@
 export function BotonWhatsApp() {
   return (
     <a
-      href="https://wa.me/18098227913?text=Hola%2C%20quisiera%20informacion%20sobre%20sus%20servicios"
+      href="https://wa.me/18493528891?text=Hola%2C%20quisiera%20informacion%20sobre%20sus%20servicios"
       target="_blank"
       rel="noreferrer"
       aria-label="Escribinos por WhatsApp"
